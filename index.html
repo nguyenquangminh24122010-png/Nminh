@@ -31,27 +31,37 @@
     <div class="sidebottom"><div class="sidebtn" style="cursor:default"><span class="avatar">N</span><span>NMINHIOS AI <small style="display:block;color:#69758b;margin-top:2px">GPT-6.1 SOL</small></span></div></div>
   </aside>
   <main class="main">
-    <header class="topbar"><div class="modelpill"><span class="live"></span><span>GPT-6.1 SOL</span><span style="color:#626f88;font-weight:400">/</span><span style="color:#8f9bb0;font-weight:500;font-size:12px">NMINHIOS AI</span></div><div class="topright"><span class="status" id="connectionStatus" style="color:var(--green)">Sẵn sàng</span></div></header>
+    <header class="topbar"><div class="modelpill"><span class="live"></span><span>GPT-6.1 SOL</span><span style="color:#626f88;font-weight:400">/</span><span style="color:#8f9bb0;font-weight:500;font-size:12px">NMINHIOS AI</span></div><div class="topright"><span class="status" id="connectionStatus" style="color:var(--green)">Chưa kết nối</span><button class="iconbtn" id="settingsBtn" title="Cài đặt kết nối" aria-label="Cài đặt kết nối"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 1.7-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20h-2.4v-.2a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-1.7-1.7.06-.06A1.7 1.7 0 0 0 8.4 15a1.7 1.7 0 0 0-1.56-1.03H6v-2.4h.84A1.7 1.7 0 0 0 8.4 10a1.7 1.7 0 0 0-.34-1.88L8 8.06l1.7-1.7.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 12.67 5.2V5h2.4v.2a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 1.7 1.7-.06.06A1.7 1.7 0 0 0 19.34 10a1.7 1.7 0 0 0 1.56 1.03h.1v2.4h-.1A1.7 1.7 0 0 0 19.4 15Z"></path></svg></button></div></header>
     <section class="conversation" id="conversation"><div class="inner" id="inner"></div></section>
     <div class="composerwrap"><div class="composer"><div class="attachrow" id="attachrow"></div><div class="composerline"><button class="attachbtn" id="attachBtn" title="Đính kèm tệp" aria-label="Đính kèm tệp"><svg viewBox="0 0 24 24"><path d="m8 12.5 7.6-7.6a4 4 0 0 1 5.7 5.7L10.5 21.4a6 6 0 0 1-8.5-8.5L12.5 2.4"/></svg></button><textarea class="prompt" id="prompt" rows="1" placeholder="Nhắn tin cho NMINHIOS AI..."></textarea><button class="send" id="sendBtn" title="Gửi" aria-label="Gửi"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button></div></div><div class="hint">Enter để gửi · Shift + Enter để xuống dòng · Tệp đính kèm được gửi cùng câu hỏi</div></div>
     <div class="footnote">NMINHIOS AI · PRIVATE WORKSPACE</div>
   </main>
 </div>
+<div class="overlay" id="settingsOverlay" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modalhead"><h2 id="settingsTitle">Kết nối NMINHIOS AI</h2><button class="close" id="closeSettings" aria-label="Đóng">×</button></div>
+    <p>Nhập địa chỉ Cloudflare Worker sau khi triển khai file <b>worker.js</b>. API key được lưu trong Cloudflare, không nằm trong website.</p>
+    <label class="fieldlabel" for="workerUrl">Cloudflare Worker URL</label>
+    <input class="field" id="workerUrl" type="url" inputmode="url" placeholder="https://ten-worker.ten-tai-khoan.workers.dev" autocomplete="url">
+    <div id="settingsStatus" style="font-size:11px;color:#8290a8;line-height:1.55;margin-top:10px">Ví dụ: https://nminhios-ai.ten-tai-khoan.workers.dev</div>
+    <button class="savebtn" id="saveSettings">Lưu kết nối</button>
+    <button class="savebtn" id="testWorker" style="margin-top:8px;background:#202b40;color:#dce5ff">Kiểm tra kết nối</button>
+  </div>
+</div>
 <input type="file" id="fileInput" hidden multiple accept=".pdf,.txt,.md,.csv,.tsv,.json,.html,.xml,.doc,.docx,.rtf,.odt,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.gif">
 <div class="toast" id="toast"></div>
 <script>
 (() => {
-  // Direct single-file setup: API key and chat logic are both in this index.html.
-  const API_KEY = 'sk-05ca12642f42c1a127d2561536f41994198b9671bc5f738661f3b0418e43ffa5';
+  // The API key lives only in Cloudflare Worker Secrets. This page stores only the Worker URL.
   const MODEL = 'gpt-6.1-sol';
-  const API = 'https://api.xingchiapi.com/v1';
-  // Matches the supplied provider config: Responses API, live web-search tool, and disabled response storage.
+  const WORKER_URL_KEY = 'nminhios_worker_url';
+  // Matches the supplied provider config: Responses API, live web search, and disabled response storage.
   const DISABLE_RESPONSE_STORAGE = true;
   const $ = id => document.getElementById(id);
   const state = { chats: [], current: null, pending: [], busy: false };
   const escapeHTML = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmtSize = n => n < 1024*1024 ? (n/1024).toFixed(0)+' KB' : (n/1024/1024).toFixed(1)+' MB';
-  const authHeaders = () => ({'Authorization':'Bearer '+API_KEY});
+  const workerBase = () => (localStorage.getItem(WORKER_URL_KEY) || '').trim().replace(/\/+$/, '');
   function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>$('toast').classList.remove('show'),3200)}
   function newChat(){const c={id:crypto.randomUUID(),title:'Cuộc trò chuyện mới',messages:[],updated:Date.now()};state.chats.unshift(c);state.current=c.id;save();render()}
   function current(){return state.chats.find(c=>c.id===state.current)}
@@ -63,8 +73,30 @@
     $('inner').querySelectorAll('[data-prompt]').forEach(b=>b.onclick=()=>{$('prompt').value=b.dataset.prompt;resizePrompt();$('prompt').focus()});renderHistory();scrollBottom()}
   function scrollBottom(){$('conversation').scrollTop=$('conversation').scrollHeight}
   function renderPending(){$('attachrow').innerHTML=state.pending.map((f,i)=>`<span class="pending ${f.error?'error':''}">▧ ${escapeHTML(f.name)} ${f.uploading?'· đang tải':f.file_id?'· đã sẵn sàng':f.error?'· lỗi':''}<button data-remove="${i}" aria-label="Xóa tệp">×</button></span>`).join('');$('attachrow').querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{state.pending.splice(+b.dataset.remove,1);renderPending()})}
-  async function parseResponse(res){let data={};try{data=await res.json()}catch{}if(!res.ok){const msg=data?.error?.message||data?.message||('HTTP '+res.status);throw new Error(msg)}return data}
-  async function uploadFile(file){const form=new FormData();form.append('purpose','user_data');form.append('file',file,file.name);const res=await fetch(API+'/files',{method:'POST',headers:authHeaders(),body:form});const data=await parseResponse(res);if(!data.id)throw new Error('API không trả về mã tệp.');return data.id}
+  async function apiFetch(path, options={}){
+    const base = workerBase();
+    if (!base) throw new Error('Chưa cài đặt Cloudflare Worker. Bấm nút bánh răng ở góc trên để nhập Worker URL.');
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),90000);
+    try{
+      return await fetch(base+'/api'+path,{...options,signal:controller.signal,cache:'no-store'});
+    }catch(err){
+      if(err?.name==='AbortError')throw new Error('Yêu cầu quá thời gian chờ 90 giây.');
+      const raw=String(err?.message||err||'');
+      if(/load failed|failed to fetch|networkerror|network request failed|connection lost/i.test(raw)){
+        throw new Error('Không kết nối được Cloudflare Worker. Kiểm tra Worker URL, trạng thái triển khai và domain GitHub Pages đã được cho phép.');
+      }
+      throw err;
+    }finally{clearTimeout(timer)}
+  }
+  async function parseResponse(res){
+    const raw=await res.text();let data={};
+    try{data=raw?JSON.parse(raw):{}}catch{data={raw}}
+    if(!res.ok){const msg=data?.error?.message||data?.message||data?.detail||('HTTP '+res.status+(raw?' — '+raw.slice(0,240):''));throw new Error(msg)}
+    if(data?.error?.message)throw new Error(data.error.message);
+    return data;
+  }
+  async function uploadFile(file){const form=new FormData();form.append('purpose','user_data');form.append('file',file,file.name);const res=await apiFetch('/files',{method:'POST',body:form});const data=await parseResponse(res);if(!data.id)throw new Error('API không trả về mã tệp'+(data.raw?': '+String(data.raw).slice(0,180):'.'));return data.id}
   $('newChat').onclick=newChat;
   $('attachBtn').onclick=()=>$('fileInput').click();
   $('fileInput').onchange=async e=>{const files=[...e.target.files];e.target.value='';let total=state.pending.reduce((n,f)=>n+(f.size||0),0);for(const file of files){if(file.size>50*1024*1024){toast(file.name+' vượt quá giới hạn 50 MB');continue}if(total+file.size>50*1024*1024){toast('Tổng dung lượng tệp trong một lượt gửi không được quá 50 MB');continue}total+=file.size;const item={name:file.name,size:file.size,type:file.type,uploading:true};state.pending.push(item);renderPending();try{item.file_id=await uploadFile(file);item.kind=file.type.startsWith('image/')?'image':'file';item.uploading=false}catch(err){item.uploading=false;item.error=true;item.errorText=err.message;toast('Không tải được '+file.name+': '+err.message)}renderPending()}};
@@ -72,9 +104,28 @@
   $('prompt').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});$('sendBtn').onclick=send;
   function responseInput(messages){return messages.map(m=>{if(m.role==='assistant')return{role:'assistant',content:m.text||''};const content=[];for(const p of (m.parts||[{type:'text',text:m.text||''}])){if(p.type==='text'&&p.text)content.push({type:'input_text',text:p.text});else if(p.type==='file'&&p.file_id)content.push(p.kind==='image'?{type:'input_image',file_id:p.file_id,detail:'auto'}:{type:'input_file',file_id:p.file_id})}return{role:'user',content:content.length?content:[{type:'input_text',text:m.text||''}]}})}
   function getOutputText(data){if(typeof data.output_text==='string'&&data.output_text.trim())return data.output_text;const out=[];for(const item of (data.output||[])){if(item.type==='message'&&Array.isArray(item.content)){for(const part of item.content){if(part.type==='output_text'&&part.text)out.push(part.text);else if(part.type==='refusal'&&part.refusal)out.push(part.refusal)}}}return out.join('\n\n').trim()}
-  async function send(){if(state.busy)return;const text=$('prompt').value.trim();const files=state.pending.filter(f=>f.file_id&&!f.error);if(!text&&!files.length)return;if(state.pending.some(f=>f.uploading)){toast('Đợi tải tệp lên hoàn tất rồi gửi nhé.');return}if(state.pending.some(f=>f.error)){toast('Có tệp tải lỗi. Hãy xóa tệp lỗi hoặc chọn lại.');return}const c=current();const shownFiles=files.map(f=>({name:f.name,size:f.size}));const parts=[];if(text)parts.push({type:'text',text});for(const f of files)parts.push({type:'file',file_id:f.file_id,kind:f.kind,name:f.name});c.messages.push({role:'user',text,files:shownFiles,parts});if(c.messages.length===1)c.title=(text||shownFiles[0]?.name||'Cuộc trò chuyện mới').slice(0,34);c.updated=Date.now();$('prompt').value='';resizePrompt();state.pending=[];renderPending();save();render();setBusy(true);const typing=document.createElement('div');typing.className='message';typing.id='typing';typing.innerHTML='<div class="msgavatar">AI</div><div class="typing"><i></i><i></i><i></i></div>';$('inner').appendChild(typing);scrollBottom();try{const payload={model:MODEL,input:responseInput(c.messages),max_output_tokens:6000,store:!DISABLE_RESPONSE_STORAGE,tools:[{type:'web_search'}],tool_choice:'auto'};const r=await fetch(API+'/responses',{method:'POST',headers:{...authHeaders(),'Content-Type':'application/json'},body:JSON.stringify(payload)});const data=await parseResponse(r);const answer=getOutputText(data);if(!answer)throw new Error('API phản hồi nhưng không có nội dung văn bản.');c.messages.push({role:'assistant',text:answer});c.updated=Date.now();save()}catch(err){let message=err.message||'Có lỗi khi gọi API.';if(message.includes('Failed to fetch')||message.includes('NetworkError'))message='Trình duyệt không kết nối được XingchiAPI (có thể do CORS, mạng hoặc trình chặn nội dung). Hãy thử mở trang bằng HTTPS trên GitHub Pages.';c.messages.push({role:'assistant',text:'**Không thể gửi yêu cầu.**\n\n'+message});save()}finally{$('typing')?.remove();setBusy(false);render()}}
-  function setBusy(v){state.busy=v;$('sendBtn').disabled=v;$('attachBtn').disabled=v;$('connectionStatus').textContent=v?'Đang xử lý…':'GPT-6.1 SOL';$('connectionStatus').style.color=v?'var(--accent)':'var(--green)'}
+  async function send(){if(state.busy)return;const text=$('prompt').value.trim();const files=state.pending.filter(f=>f.file_id&&!f.error);if(!text&&!files.length)return;if(state.pending.some(f=>f.uploading)){toast('Đợi tải tệp lên hoàn tất rồi gửi nhé.');return}if(state.pending.some(f=>f.error)){toast('Có tệp tải lỗi. Hãy xóa tệp lỗi hoặc chọn lại.');return}const c=current();const shownFiles=files.map(f=>({name:f.name,size:f.size}));const parts=[];if(text)parts.push({type:'text',text});for(const f of files)parts.push({type:'file',file_id:f.file_id,kind:f.kind,name:f.name});c.messages.push({role:'user',text,files:shownFiles,parts});if(c.messages.length===1)c.title=(text||shownFiles[0]?.name||'Cuộc trò chuyện mới').slice(0,34);c.updated=Date.now();$('prompt').value='';resizePrompt();state.pending=[];renderPending();save();render();setBusy(true);const typing=document.createElement('div');typing.className='message';typing.id='typing';typing.innerHTML='<div class="msgavatar">AI</div><div class="typing"><i></i><i></i><i></i></div>';$('inner').appendChild(typing);scrollBottom();try{const payload={model:MODEL,input:responseInput(c.messages),max_output_tokens:6000,store:!DISABLE_RESPONSE_STORAGE,tools:[{type:'web_search',external_web_access:true}],tool_choice:'auto'};const r=await apiFetch('/responses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const data=await parseResponse(r);const answer=getOutputText(data);if(!answer)throw new Error('API phản hồi nhưng không có nội dung văn bản.');c.messages.push({role:'assistant',text:answer});c.updated=Date.now();save()}catch(err){let message=err.message||'Có lỗi khi gọi API.';if(/load failed|failed to fetch|networkerror|network request failed/i.test(message))message='Không kết nối được Cloudflare Worker. Kiểm tra Worker URL và cấu hình CORS. Chi tiết: '+message;c.messages.push({role:'assistant',text:'**Không thể gửi yêu cầu.**\n\n'+message});save()}finally{$('typing')?.remove();setBusy(false);render()}}
+  function setBusy(v){state.busy=v;$('sendBtn').disabled=v;$('attachBtn').disabled=v;$('connectionStatus').textContent=v?'Đang xử lý…':(workerBase()?'Đã cấu hình':'Chưa kết nối');$('connectionStatus').style.color=v?'var(--accent)':(workerBase()?'var(--green)':'var(--muted)')}
+  function openSettings(){ $('workerUrl').value=workerBase(); $('settingsOverlay').classList.add('open'); $('settingsOverlay').setAttribute('aria-hidden','false'); setTimeout(()=>$('workerUrl').focus(),50); }
+  function closeSettings(){ $('settingsOverlay').classList.remove('open'); $('settingsOverlay').setAttribute('aria-hidden','true'); }
+  function normalizeWorkerUrl(value){
+    try {
+      const u = new URL(String(value || '').trim());
+      // Root URLs have pathname '/', so accept '/' and normalize to the origin.
+      if (u.protocol !== 'https:' || !u.hostname || u.username || u.password ||
+          (u.pathname !== '/' && u.pathname !== '') || u.search || u.hash) return '';
+      return u.origin;
+    } catch { return ''; }
+  }
+  function validWorkerUrl(value){ return !!normalizeWorkerUrl(value); }
+  $('settingsBtn').onclick=openSettings;
+  $('closeSettings').onclick=closeSettings;
+  $('settingsOverlay').addEventListener('click',e=>{if(e.target===$('settingsOverlay'))closeSettings()});
+  $('saveSettings').onclick=()=>{const value=normalizeWorkerUrl($('workerUrl').value);if(!value){toast('Worker URL phải là địa chỉ HTTPS hợp lệ, không thêm /api.');return;}$('workerUrl').value=value;localStorage.setItem(WORKER_URL_KEY,value);$('connectionStatus').textContent='Đã cấu hình';$('connectionStatus').style.color='var(--green)';$('settingsStatus').textContent='Đã lưu Worker URL. Bấm “Kiểm tra kết nối” để kiểm tra API.';toast('Đã lưu địa chỉ Worker.');};
+  $('testWorker').onclick=async()=>{const value=normalizeWorkerUrl($('workerUrl').value);if(!value){toast('Hãy nhập Worker URL HTTPS hợp lệ trước.');return;}$('workerUrl').value=value;const btn=$('testWorker');btn.disabled=true;btn.textContent='Đang kiểm tra…';$('settingsStatus').textContent='Đang kiểm tra Worker và kết nối XingchiAPI…';try{const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),25000);let response;try{response=await fetch(value+'/api/health',{method:'GET',cache:'no-store',signal:controller.signal});}finally{clearTimeout(timer);}const data=await parseResponse(response);if(!data.ok)throw new Error(data.detail||data.error?.message||'Worker chưa kết nối được API.');localStorage.setItem(WORKER_URL_KEY,value);$('connectionStatus').textContent='Đã kết nối';$('connectionStatus').style.color='var(--green)';$('settingsStatus').textContent='Kết nối thành công · XingchiAPI hoạt động · Model gpt-6.1-sol';toast('Kết nối API thành công.');}catch(err){$('settingsStatus').textContent='Kiểm tra thất bại: '+(err.message||err);toast('Không kiểm tra được kết nối.');}finally{btn.disabled=false;btn.textContent='Kiểm tra kết nối';}};
   load();
+  if(!workerBase()) setTimeout(openSettings,300);
+  else {$('connectionStatus').textContent='Đã cấu hình';$('connectionStatus').style.color='var(--green)';}
 })();
 </script>
 </body>
